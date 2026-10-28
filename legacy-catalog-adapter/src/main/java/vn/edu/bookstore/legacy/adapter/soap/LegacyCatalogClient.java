@@ -7,6 +7,8 @@ import org.springframework.stereotype.Component;
 import vn.edu.bookstore.legacy.adapter.soap.generated.Book;
 import vn.edu.bookstore.legacy.adapter.soap.generated.BookCatalogFault;
 import vn.edu.bookstore.legacy.adapter.soap.generated.BookCatalogPortType;
+import vn.edu.bookstore.legacy.adapter.soap.generated.GetBookRequest;
+import vn.edu.bookstore.legacy.adapter.soap.generated.SearchBooksRequest;
 
 /**
  * Tầng chống ăn mòn (anti-corruption layer): gọi BookCatalogService và chuyển
@@ -25,12 +27,33 @@ public class LegacyCatalogClient {
         // TODO(TH1-6): tạo GetBookRequest, gọi port.getBook(request), ánh xạ bằng toModel(...)
         // TODO(TH1-7): bắt BookCatalogFault, SOAPFaultException, WebServiceException
         //              và ném lại bằng translate(...) / unavailable(...)
-        throw new UnsupportedOperationException("TODO(TH1-6)");
+        GetBookRequest request = new GetBookRequest();
+        request.setIsbn(isbn);
+        try {
+            return toModel(port.getBook(request).getBook());
+        } catch (BookCatalogFault fault) {
+            throw translate(fault);
+        } catch (SOAPFaultException e) {
+            throw translate(e);
+        } catch (WebServiceException e) {
+            throw unavailable(e);
+        }
     }
 
     public List<LegacyBook> search(String keyword, int maxResults) {
         // TODO(TH1-6): tạo SearchBooksRequest (keyword, maxResults), gọi port.searchBooks(...)
-        throw new UnsupportedOperationException("TODO(TH1-6)");
+        SearchBooksRequest request = new SearchBooksRequest();
+        request.setKeyword(keyword);
+        request.setMaxResults(maxResults);
+        try {
+            return port.searchBooks(request).getBook().stream().map(LegacyCatalogClient::toModel).toList();
+        } catch (BookCatalogFault fault) {
+            throw translate(fault);
+        } catch (SOAPFaultException e) {
+            throw translate(e);
+        } catch (WebServiceException e) {
+            throw unavailable(e);
+        }
     }
 
     /** TODO(TH1-7): BOOK_NOT_FOUND → NOT_FOUND; INVALID_ISBN/INVALID_REQUEST → INVALID_REQUEST; còn lại → UPSTREAM_ERROR. */

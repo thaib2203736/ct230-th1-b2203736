@@ -1,8 +1,16 @@
 package vn.edu.bookstore.legacy.adapter.config;
 
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+
+import jakarta.xml.ws.BindingProvider;
+import jakarta.xml.ws.handler.Handler;
+import vn.edu.bookstore.legacy.adapter.soap.SoapLoggingHandler;
 import vn.edu.bookstore.legacy.adapter.soap.generated.BookCatalogPortType;
 import vn.edu.bookstore.legacy.adapter.soap.generated.BookCatalogService;
 
@@ -21,6 +29,17 @@ public class LegacySoapClientConfig {
         //   - ENDPOINT_ADDRESS_PROPERTY = props.endpoint()
         //   - CONNECT_TIMEOUT / REQUEST_TIMEOUT (mili giây) từ props
         // TODO(TH1-5): nếu props.logMessages() thì thêm SoapLoggingHandler vào handler chain
+        Map<String, Object> ctx = ((BindingProvider) port).getRequestContext();
+        ctx.put(BindingProvider.ENDPOINT_ADDRESS_PROPERTY, props.endpoint());
+        ctx.put(CONNECT_TIMEOUT, (int) props.connectTimeout().toMillis());
+        ctx.put(REQUEST_TIMEOUT, (int) props.readTimeout().toMillis());
+
+        if (props.logMessages()) {
+            @SuppressWarnings("rawtypes")
+            List<Handler> chain = new ArrayList<>(((BindingProvider) port).getBinding().getHandlerChain());
+            chain.add(new SoapLoggingHandler());
+            ((BindingProvider) port).getBinding().setHandlerChain(chain);
+        }
         return port;
     }
 }
