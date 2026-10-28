@@ -1,12 +1,18 @@
 package vn.edu.bookstore.legacy.adapter.soap;
 
+import jakarta.xml.soap.SOAPFault;
 import jakarta.xml.ws.WebServiceException;
 import jakarta.xml.ws.soap.SOAPFaultException;
+
+import java.net.SocketTimeoutException;
 import java.util.List;
 import org.springframework.stereotype.Component;
+
+import vn.edu.bookstore.legacy.adapter.soap.LegacyCatalogException.Kind;
 import vn.edu.bookstore.legacy.adapter.soap.generated.Book;
 import vn.edu.bookstore.legacy.adapter.soap.generated.BookCatalogFault;
 import vn.edu.bookstore.legacy.adapter.soap.generated.BookCatalogPortType;
+import vn.edu.bookstore.legacy.adapter.soap.generated.ErrorDetail;
 import vn.edu.bookstore.legacy.adapter.soap.generated.GetBookRequest;
 import vn.edu.bookstore.legacy.adapter.soap.generated.SearchBooksRequest;
 
@@ -58,17 +64,38 @@ public class LegacyCatalogClient {
 
     /** TODO(TH1-7): BOOK_NOT_FOUND → NOT_FOUND; INVALID_ISBN/INVALID_REQUEST → INVALID_REQUEST; còn lại → UPSTREAM_ERROR. */
     static LegacyCatalogException translate(BookCatalogFault fault) {
-        throw new UnsupportedOperationException("TODO(TH1-7)");
+        ErrorDetail d = fault.getFaultInfo();
+        String code = d == null ? "UNKNOWN" : d.getCode();
+        String message = d == null ? fault.getMessage() : d.getMessage();
+        Kind kind = switch (code) {
+            case "BOOK_NOT_FOUND" -> Kind.NOT_FOUND;
+            case "INVALID_ISBN", "INVALID_REQUEST" -> Kind.INVALID_REQUEST;
+            default -> Kind.UPSTREAM_ERROR;
+        };
+        return new LegacyCatalogException(kind, code, message, fault);
     }
 
     /** TODO(TH1-7): faultcode Client → INVALID_REQUEST, Server → UPSTREAM_ERROR. */
     static LegacyCatalogException translate(SOAPFaultException e) {
-        throw new UnsupportedOperationException("TODO(TH1-7)");
+        SOAPFault f = e.getFault();
+        String faultCode = f.getFaultCodeAsQName().getLocalPart();
+        Kind kind = "Client".equals(faultCode) ? Kind.INVALID_REQUEST : Kind.UPSTREAM_ERROR;
+        return new LegacyCatalogException(kind, "soap: " + faultCode,f.getFaultString(), e);
     }
 
     /** TODO(TH1-7): phân biệt hết thời gian chờ (SocketTimeoutException) với không kết nối được. */
     static LegacyCatalogException unavailable(WebServiceException e) {
-        throw new UnsupportedOperationException("TODO(TH1-7)");
+        boolean timeout = hasCause(e, SocketTimeoutException.class) || hasCause(e, java.net.http.HttpTimeoutException.class);
+        return new LegacyCatalogException(timeout ? Kind.UPSTREAM_TIMEOUT : Kind.UPSTREAM_UNAVAILABLE, null, "Khong goi duoc BookCatalogService: " + e.getMessage(), e);
+    }
+
+    private static boolean hasCause(Throwable t, Class<? extends Throwable> type) {
+        for (Throwable c = t; c != null; c = c.getCause()) {
+            if (type.isInstance(c)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /** Ánh xạ kiểu SOAP → mô hình nội bộ (không để lớp sinh từ WSDL "rò" ra API REST). */
