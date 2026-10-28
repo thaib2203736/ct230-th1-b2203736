@@ -1,8 +1,12 @@
 package vn.edu.bookstore.legacy.adapter.soap;
 
+import jakarta.xml.soap.SOAPException;
 import jakarta.xml.ws.handler.MessageContext;
 import jakarta.xml.ws.handler.soap.SOAPHandler;
 import jakarta.xml.ws.handler.soap.SOAPMessageContext;
+
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.util.Set;
 import javax.xml.namespace.QName;
 import org.slf4j.Logger;
@@ -31,7 +35,14 @@ public class SoapLoggingHandler implements SOAPHandler<SOAPMessageContext> {
     private void log(SOAPMessageContext context, boolean fault) {
         // TODO(TH1-5): đọc MessageContext.MESSAGE_OUTBOUND_PROPERTY để biết chiều gửi/nhận,
         //   ghi context.getMessage() ra ByteArrayOutputStream (writeTo) rồi LOG.info(...)
-        LOG.debug("SoapLoggingHandler chưa được hiện thực (fault={})", fault);
+        boolean outbound = Boolean.TRUE.equals(context.get(MessageContext.MESSAGE_OUTBOUND_PROPERTY));
+        try {
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            context.getMessage().writeTo(out);
+            LOG.info("SOAP {}{}:\n{}", outbound ? "--> Gui" : "<-- Nhan", fault ? " (Fault)" : "");
+        } catch (SOAPException | IOException e) {
+            LOG.warn("Khong ghi duoc log thong diep SOAP: {}", e.getMessage());
+        }
     }
 
     @Override
