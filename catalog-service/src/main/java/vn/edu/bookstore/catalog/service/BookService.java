@@ -20,8 +20,11 @@ public class BookService {
     }
 
     public Page<BookEntity> list(String q, Pageable pageable) {
-        // TODO(TH2-3): khi q khác rỗng, tìm theo tiêu đề HOẶC tác giả (phương thức truy vấn dẫn xuất của BookRepository)
+        // khi q khác rỗng, tìm theo tiêu đề HOẶC tác giả (phương thức truy vấn dẫn xuất của BookRepository)
+        if (q == null || q.isBlank()) {
         return repository.findAll(pageable);
+    }
+        return repository.findByTitleContainingIgnoreCaseOrAuthorContainingIgnoreCase(q.trim(), q.trim(), pageable);
     }
 
     public BookEntity get(String isbn) {
