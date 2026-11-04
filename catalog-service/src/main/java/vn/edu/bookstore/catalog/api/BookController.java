@@ -24,10 +24,21 @@ public class BookController implements BooksApi {
 
     @Override
     public ResponseEntity<BookPage> listBooks(String q, Integer page, Integer size, String sort) {
-        // TODO(TH2-4): đổi sort "title,asc" | "price,desc" | "publishedYear,asc" thành Sort
+        //   đổi sort "title,asc" | "price,desc" | "publishedYear,asc" thành Sort
         //   (price → thuộc tính priceAmount), tạo PageRequest.of(page, size, sort),
         //   gọi service.list(q, pageable) và trả BookMapper.toPage(...)
-        throw new UnsupportedOperationException("TODO(TH2-4)");
+        return ResponseEntity.ok(BookMapper.toPage(service.list(q, PageRequest.of(page, size, toSort(sort)))));
+    }
+
+    static Sort toSort(String sort) {
+        String[] parts = sort.split(",");
+        String property = switch (parts[0]) {
+            case "price" -> "priceAmount";
+            case "publishedYear" -> "publishedYear";
+            default -> "title";
+        };
+        Sort.Direction dir = parts.length > 1 && parts[1].equals("desc") ? Sort.Direction.DESC : Sort.Direction.ASC;
+        return Sort.by(dir, property).and(Sort.by("isbn"));
     }
 
     @Override
