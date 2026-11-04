@@ -20,6 +20,7 @@
     <module>bookstore-contracts</module>
     <module>legacy-bookcatalog-soap</module>
     <module>legacy-catalog-adapter</module>
+    <module>catalog-service</module>
   </modules>
 
   <properties>
