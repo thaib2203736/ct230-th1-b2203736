@@ -1,6 +1,7 @@
 package vn.edu.bookstore.order.client;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -43,6 +44,8 @@ class CatalogClientContractTest {
         assertThat(book.price().currency()).isEqualTo("VND");
     }
 
-    // TODO(TH3-7): sau khi thêm hợp đồng getBookNotFound.yml ở catalog-service, viết ca kiểm thử:
-    //   client().getBook("9789999999999") ném UnknownBookException
+    @Test
+    void sachKhongTonTaiTheoHopDong() {
+        assertThatThrownBy(() -> client().getBook("9789999999999")).isInstanceOf(UnknownBookException.class);
+    }
 }
