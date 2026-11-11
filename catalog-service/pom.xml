@@ -46,6 +46,14 @@
       <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
     </dependency>
     <dependency>
+      <groupId>org.springframework.cloud</groupId>
+      <artifactId>spring-cloud-starter-netflix-eureka-client</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.cloud</groupId>
+      <artifactId>spring-cloud-starter-config</artifactId>
+    </dependency>
+    <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-webmvc-test</artifactId>
       <scope>test</scope>
@@ -65,12 +73,16 @@
       <artifactId>testcontainers-postgresql</artifactId>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>org.springframework.cloud</groupId>
+      <artifactId>spring-cloud-starter-contract-verifier</artifactId>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 
   <build>
     <plugins>
-      <!-- TODO(TH2-2): chạy ./mvnw -pl catalog-service generate-sources rồi đọc BooksApi.java sinh ra
-           API-first: sinh interface + model từ openapi.yaml; lớp controller tự viết implements interface -->
+      <!-- API-first: sinh interface + model từ openapi.yaml; lớp controller tự viết implements interface -->
       <plugin>
         <groupId>org.openapitools</groupId>
         <artifactId>openapi-generator-maven-plugin</artifactId>
@@ -106,6 +118,28 @@
             </configuration>
           </execution>
         </executions>
+      </plugin>
+      <!-- TH3-7: kiểm thử hợp đồng phía BÊN CUNG CẤP + sinh catalog-service-*-stubs.jar cho bên tiêu thụ -->
+      <plugin>
+        <groupId>org.springframework.cloud</groupId>
+        <artifactId>spring-cloud-contract-maven-plugin</artifactId>
+        <version>${spring-cloud-contract.version}</version>
+        <executions>
+          <execution>
+            <goals>
+              <goal>convert</goal>
+              <goal>generateTests</goal>
+              <goal>generateStubs</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <testFramework>JUNIT5</testFramework>
+          <baseClassForTests>vn.edu.bookstore.catalog.contract.ContractVerifierBase</baseClassForTests>
+          <!-- luôn sinh lại kiểm thử/stub, tránh mất kiểm thử hợp đồng khi build lại không clean -->
+          <incrementalContractTests>false</incrementalContractTests>
+          <incrementalContractStubsJar>false</incrementalContractStubsJar>
+        </configuration>
       </plugin>
       <plugin>
         <groupId>org.springframework.boot</groupId>
