@@ -3,11 +3,9 @@ package vn.edu.bookstore.legacy.adapter.soap;
 import jakarta.xml.soap.SOAPFault;
 import jakarta.xml.ws.WebServiceException;
 import jakarta.xml.ws.soap.SOAPFaultException;
-
 import java.net.SocketTimeoutException;
 import java.util.List;
 import org.springframework.stereotype.Component;
-
 import vn.edu.bookstore.legacy.adapter.soap.LegacyCatalogException.Kind;
 import vn.edu.bookstore.legacy.adapter.soap.generated.Book;
 import vn.edu.bookstore.legacy.adapter.soap.generated.BookCatalogFault;
@@ -17,7 +15,7 @@ import vn.edu.bookstore.legacy.adapter.soap.generated.GetBookRequest;
 import vn.edu.bookstore.legacy.adapter.soap.generated.SearchBooksRequest;
 
 /**
- * Tầng chống ăn mòn (anti-corruption layer): gọi BookCatalogService và chuyển
+ * Lớp chống lệch mô hình (anti-corruption layer, ACL): gọi BookCatalogService và chuyển
  * kiểu dữ liệu + lỗi SOAP sang mô hình nội bộ {@link LegacyBook} / {@link LegacyCatalogException}.
  */
 @Component
@@ -30,9 +28,6 @@ public class LegacyCatalogClient {
     }
 
     public LegacyBook getBook(String isbn) {
-        // TODO(TH1-6): tạo GetBookRequest, gọi port.getBook(request), ánh xạ bằng toModel(...)
-        // TODO(TH1-7): bắt BookCatalogFault, SOAPFaultException, WebServiceException
-        //              và ném lại bằng translate(...) / unavailable(...)
         GetBookRequest request = new GetBookRequest();
         request.setIsbn(isbn);
         try {
@@ -47,7 +42,6 @@ public class LegacyCatalogClient {
     }
 
     public List<LegacyBook> search(String keyword, int maxResults) {
-        // TODO(TH1-6): tạo SearchBooksRequest (keyword, maxResults), gọi port.searchBooks(...)
         SearchBooksRequest request = new SearchBooksRequest();
         request.setKeyword(keyword);
         request.setMaxResults(maxResults);
@@ -62,7 +56,7 @@ public class LegacyCatalogClient {
         }
     }
 
-    /** TODO(TH1-7): BOOK_NOT_FOUND → NOT_FOUND; INVALID_ISBN/INVALID_REQUEST → INVALID_REQUEST; còn lại → UPSTREAM_ERROR. */
+    /** TH1-7: fault có mô hình (khai báo trong WSDL) — dựa vào mã nghiệp vụ trong bs:ErrorDetail. */
     static LegacyCatalogException translate(BookCatalogFault fault) {
         ErrorDetail d = fault.getFaultInfo();
         String code = d == null ? "UNKNOWN" : d.getCode();
@@ -75,18 +69,19 @@ public class LegacyCatalogClient {
         return new LegacyCatalogException(kind, code, message, fault);
     }
 
-    /** TODO(TH1-7): faultcode Client → INVALID_REQUEST, Server → UPSTREAM_ERROR. */
+    /** TH1-7: fault không có mô hình — chỉ còn faultcode soap:Client / soap:Server. */
     static LegacyCatalogException translate(SOAPFaultException e) {
         SOAPFault f = e.getFault();
         String faultCode = f.getFaultCodeAsQName().getLocalPart();
         Kind kind = "Client".equals(faultCode) ? Kind.INVALID_REQUEST : Kind.UPSTREAM_ERROR;
-        return new LegacyCatalogException(kind, "soap: " + faultCode,f.getFaultString(), e);
+        return new LegacyCatalogException(kind, "soap:" + faultCode, f.getFaultString(), e);
     }
 
-    /** TODO(TH1-7): phân biệt hết thời gian chờ (SocketTimeoutException) với không kết nối được. */
     static LegacyCatalogException unavailable(WebServiceException e) {
-        boolean timeout = hasCause(e, SocketTimeoutException.class) || hasCause(e, java.net.http.HttpTimeoutException.class);
-        return new LegacyCatalogException(timeout ? Kind.UPSTREAM_TIMEOUT : Kind.UPSTREAM_UNAVAILABLE, null, "Khong goi duoc BookCatalogService: " + e.getMessage(), e);
+        boolean timeout = hasCause(e, SocketTimeoutException.class)
+                || hasCause(e, java.net.http.HttpTimeoutException.class);
+        return new LegacyCatalogException(timeout ? Kind.UPSTREAM_TIMEOUT : Kind.UPSTREAM_UNAVAILABLE,
+                null, "Không gọi được BookCatalogService: " + e.getMessage(), e);
     }
 
     private static boolean hasCause(Throwable t, Class<? extends Throwable> type) {

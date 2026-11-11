@@ -12,12 +12,12 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
-
 import vn.edu.bookstore.legacy.adapter.LegacySoapTestServer;
 
+/** Hệ thống kế thừa chậm: timeout đọc 500 ms nhỏ hơn độ trễ 2 s → 504. */
 @SpringBootTest(properties = "bookstore.legacy.read-timeout=500ms")
 @AutoConfigureMockMvc
-public class LegacyUnavailableTest {
+class LegacyUnavailableTest {
 
     static final LegacySoapTestServer SLOW = LegacySoapTestServer.start(2000);
 
