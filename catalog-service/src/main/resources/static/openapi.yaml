@@ -1,9 +1,4 @@
 openapi: 3.1.0
-# TODO(TH2-1): REVIEW hợp đồng trước khi viết mã (ghi nhận xét vào docs/review_openapi.md):
-#   - Mã trạng thái của từng thao tác đã đúng ngữ nghĩa RFC 9110 chưa (201/204/304/412/428)?
-#   - Ràng buộc Isbn13, Money (minimum, multipleOf) có khớp XSD ở TH1 không?
-#   - Thao tác nào an toàn / idempotent? Vì sao PUT cần If-Match?
-#   - Nếu thêm trường bắt buộc mới vào BookCreateRequest thì có phá vỡ tương thích ngược không?
 info:
   title: BookStore Catalog API
   version: 1.0.0

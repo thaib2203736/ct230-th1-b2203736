@@ -1,4 +1,4 @@
-# Ảnh dịch vụ SOAP kế thừa BookCatalogService (cổng 8091) — build nhiều giai đoạn
+# Image dịch vụ SOAP kế thừa BookCatalogService (cổng 8091) — build nhiều giai đoạn
 # docker build -t bookstore/legacy-bookcatalog-soap:1.0 legacy-bookcatalog-soap
 FROM maven:3.9-eclipse-temurin-21 AS build
 WORKDIR /src

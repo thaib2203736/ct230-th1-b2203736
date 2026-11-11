@@ -2,13 +2,10 @@ package vn.edu.bookstore.catalog.api.error;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
-
 import java.net.URI;
-import java.net.http.HttpHeaders;
-import java.util.DuplicateFormatFlagsException;
 import java.util.List;
 import java.util.Map;
-
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ProblemDetail;
@@ -26,63 +23,68 @@ import vn.edu.bookstore.catalog.service.DuplicateIsbnException;
 import vn.edu.bookstore.catalog.service.PreconditionFailedException;
 import vn.edu.bookstore.catalog.service.PreconditionRequiredException;
 
-/** Mọi lỗi → application/problem+json (RFC 9457). */
+/** TH2-6: mọi lỗi → application/problem+json (RFC 9457). */
 @RestControllerAdvice
 public class GlobalProblemHandler extends ResponseEntityExceptionHandler {
 
     @ExceptionHandler(BookNotFoundException.class)
     ProblemDetail notFound(BookNotFoundException e, HttpServletRequest req) {
-        return problem(HttpStatus.NOT_FOUND, ProblemTypes.BOOK_NOT_FOUND, "Khong tim thay sach", e.getMessage(), req);
+        return problem(HttpStatus.NOT_FOUND, ProblemTypes.BOOK_NOT_FOUND, "Không tìm thấy sách", e.getMessage(), req);
     }
 
-    // TODO(TH2-6): bổ sung ánh xạ
-    //   DuplicateIsbnException → 409; PreconditionFailedException → 412; PreconditionRequiredException → 428;
-    //   ConstraintViolationException (tham số sai mẫu) → 400 validation-failed kèm "errors";
-    //   override handleMethodArgumentNotValid (thân JSON sai hợp đồng) → 400 validation-failed;
-    //   override handleHttpMessageNotReadable (JSON hỏng) → 400 validation-failed.
     @ExceptionHandler(DuplicateIsbnException.class)
-    ProblemDetail duplicate(DuplicateFormatFlagsException e, HttpServletRequest req) {
-        return problem(HttpStatus.CONFLICT, null, "ISBN da ton tai", e.getMessage(), req);
+    ProblemDetail duplicate(DuplicateIsbnException e, HttpServletRequest req) {
+        return problem(HttpStatus.CONFLICT, null, "ISBN đã tồn tại", e.getMessage(), req);
     }
 
     @ExceptionHandler(PreconditionFailedException.class)
     ProblemDetail preconditionFailed(PreconditionFailedException e, HttpServletRequest req) {
-        return problem(HttpStatus.PRECONDITION_FAILED, null, "Phien ban da thay doi", e.getMessage(), req);
+        return problem(HttpStatus.PRECONDITION_FAILED, null, "Phiên bản đã thay đổi", e.getMessage(), req);
     }
 
     @ExceptionHandler(PreconditionRequiredException.class)
-    ProblemDetail duplicate(PreconditionRequiredException e, HttpServletRequest req) {
-        return problem(HttpStatus.PRECONDITION_REQUIRED, null, "Thieu If-Match", e.getMessage(), req);
+    ProblemDetail preconditionRequired(PreconditionRequiredException e, HttpServletRequest req) {
+        return problem(HttpStatus.PRECONDITION_REQUIRED, null, "Thiếu If-Match", e.getMessage(), req);
     }
 
+    /** Vi phạm ràng buộc trên tham số đường dẫn/truy vấn (interface sinh ra có @Validated). */
     @ExceptionHandler(ConstraintViolationException.class)
     ProblemDetail constraint(ConstraintViolationException e, HttpServletRequest req) {
-        ProblemDetail p = problem(HttpStatus.BAD_REQUEST, ProblemTypes.VALIDATION_FAILED, "Du lieu khong hop le", "Tham so khong khop hop dong API", req);
+        ProblemDetail p = problem(HttpStatus.BAD_REQUEST, ProblemTypes.VALIDATION_FAILED,
+                "Dữ liệu không hợp lệ", "Tham số không khớp hợp đồng API", req);
         p.setProperty("errors", e.getConstraintViolations().stream()
-            .map(v -> Map.of("field", lastNode(v.getPropertyPath().toString()), "message", v.getMessage())).toList()
-        );
+                .map(v -> Map.of("field", lastNode(v.getPropertyPath().toString()), "message", v.getMessage()))
+                .toList());
         return p;
     }
 
-    protected ResponseEntity<Object> handleMethodArgumentNotValid(MethodArgumentNotValidException ex, HttpHeaders headers, HttpStatusCode status, WebRequest request) {
-        ProblemDetail p = problem(HttpStatus.BAD_REQUEST, ProblemTypes.VALIDATION_FAILED, "Du lieu khong hop le", "Than yeu cau khong khop hop dong API", path(request));
+    @Override
+    protected ResponseEntity<Object> handleMethodArgumentNotValid(MethodArgumentNotValidException ex,
+            HttpHeaders headers, HttpStatusCode status, WebRequest request) {
+        ProblemDetail p = problem(HttpStatus.BAD_REQUEST, ProblemTypes.VALIDATION_FAILED,
+                "Dữ liệu không hợp lệ", "Thân yêu cầu không khớp hợp đồng API", path(request));
         List<Map<String, String>> errors = ex.getBindingResult().getFieldErrors().stream()
-            .map(f -> Map.of("field", f.getField(), "message", String.valueOf(f.getDefaultMessage())))
-            .toList();
+                .map(f -> Map.of("field", f.getField(), "message", String.valueOf(f.getDefaultMessage())))
+                .toList();
         p.setProperty("errors", errors);
         return ResponseEntity.badRequest().body(p);
     }
 
-    protected ResponseEntity<Object> handleHandlerMethodValidationException(HandlerMethodValidationException ex, HttpHeaders headers, HttpStatusCode status, WebRequest request) {
-        ProblemDetail p = problem(HttpStatus.BAD_REQUEST, ProblemTypes.VALIDATION_FAILED, "Du lieu khong hop le", "Tham so khong khop hop dong API", path(request));
+    @Override
+    protected ResponseEntity<Object> handleHandlerMethodValidationException(HandlerMethodValidationException ex,
+            HttpHeaders headers, HttpStatusCode status, WebRequest request) {
+        ProblemDetail p = problem(HttpStatus.BAD_REQUEST, ProblemTypes.VALIDATION_FAILED,
+                "Dữ liệu không hợp lệ", "Tham số không khớp hợp đồng API", path(request));
         p.setProperty("errors", ex.getAllErrors().stream()
-            .map(err -> Map.of("message", String.valueOf(err.getDefaultMessage()))).toList()
-        );
+                .map(err -> Map.of("message", String.valueOf(err.getDefaultMessage()))).toList());
         return ResponseEntity.badRequest().body(p);
     }
 
-    protected ResponseEntity<Object> handleHttpMessageNotReadable(HttpMessageNotReadableException ex, HttpHeaders headers, HttpStatusCode status, WebRequest request) {
-        ProblemDetail p = problem(HttpStatus.BAD_REQUEST, ProblemTypes.VALIDATION_FAILED, "Du lieu khong hop le", "Khong doc duoc than yeu cau", path(request));
+    @Override
+    protected ResponseEntity<Object> handleHttpMessageNotReadable(HttpMessageNotReadableException ex,
+            HttpHeaders headers, HttpStatusCode status, WebRequest request) {
+        ProblemDetail p = problem(HttpStatus.BAD_REQUEST, ProblemTypes.VALIDATION_FAILED,
+                "Dữ liệu không hợp lệ", "Không đọc được thân yêu cầu JSON", path(request));
         return ResponseEntity.badRequest().body(p);
     }
 

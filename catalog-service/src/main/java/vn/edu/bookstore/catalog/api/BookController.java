@@ -1,7 +1,6 @@
 package vn.edu.bookstore.catalog.api;
 
 import java.net.URI;
-
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
@@ -28,11 +27,9 @@ public class BookController implements BooksApi {
         this.service = service;
     }
 
+    // TH2-4: phân trang + sắp xếp theo tham số đã khai báo trong hợp đồng
     @Override
     public ResponseEntity<BookPage> listBooks(String q, Integer page, Integer size, String sort) {
-        //   đổi sort "title,asc" | "price,desc" | "publishedYear,asc" thành Sort
-        //   (price → thuộc tính priceAmount), tạo PageRequest.of(page, size, sort),
-        //   gọi service.list(q, pageable) và trả BookMapper.toPage(...)
         return ResponseEntity.ok(BookMapper.toPage(service.list(q, PageRequest.of(page, size, toSort(sort)))));
     }
 
@@ -47,11 +44,10 @@ public class BookController implements BooksApi {
         return Sort.by(dir, property).and(Sort.by("isbn"));
     }
 
+    // TH2-5: ETag + If-None-Match → 304
     @Override
     public ResponseEntity<Book> getBook(String isbn, String ifNoneMatch) {
         BookEntity e = service.get(isbn);
-        //   tính ETag = BookMapper.etag(e); nếu If-None-Match khớp → 304 Not Modified;
-        //   ngược lại trả 200 kèm header ETag
         String etag = BookMapper.etag(e);
         if (ifNoneMatch != null && matches(ifNoneMatch, etag)) {
             return ResponseEntity.status(HttpStatus.NOT_MODIFIED).eTag(etag).build();
@@ -67,15 +63,20 @@ public class BookController implements BooksApi {
         return ResponseEntity.created(location).eTag(BookMapper.etag(e)).body(BookMapper.toApi(e));
     }
 
+    // TH2-5: If-Match bắt buộc; lệch phiên bản → 412
     @Override
     public ResponseEntity<Book> updateBook(String isbn, BookUpdateRequest request, String ifMatch) {
-        //   thiếu If-Match → PreconditionRequiredException (428);
-        //   đọc số phiên bản trong If-Match ("3" → 3), gọi service.update(...), trả 200 kèm ETag mới
         if (ifMatch == null || ifMatch.isBlank()) {
-            throw new PreconditionRequiredException("Can header If-Match chua ETag da doc truoc khi cap nhat");
+            throw new PreconditionRequiredException("Cần header If-Match chứa ETag đã đọc trước khi cập nhật");
         }
         BookEntity e = service.update(isbn, request, parseVersion(ifMatch));
         return ResponseEntity.ok().eTag(BookMapper.etag(e)).body(BookMapper.toApi(e));
+    }
+
+    @Override
+    public ResponseEntity<Void> deleteBook(String isbn) {
+        service.delete(isbn);
+        return ResponseEntity.noContent().build();
     }
 
     private static boolean matches(String header, String etag) {
@@ -89,17 +90,11 @@ public class BookController implements BooksApi {
     }
 
     private static long parseVersion(String ifMatch) {
-        String v = ifMatch.trim().replaceFirst("^W/", "").replace("\"", "0");
+        String v = ifMatch.trim().replaceFirst("^W/", "").replace("\"", "");
         try {
             return Long.parseLong(v);
         } catch (NumberFormatException ex) {
-            throw new PreconditionFailedException("If-Match khong hop le: " + ifMatch);
+            throw new PreconditionFailedException("If-Match không hợp lệ: " + ifMatch);
         }
-    }
-
-    @Override
-    public ResponseEntity<Void> deleteBook(String isbn) {
-        service.delete(isbn);
-        return ResponseEntity.noContent().build();
     }
 }
