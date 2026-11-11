@@ -19,7 +19,7 @@ import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.client.WireMock;
 
 import jakarta.ws.rs.core.MediaType;
-import vn.edu.bookstore.catalog.TestcontainersConfig;
+import vn.edu.bookstore.order.TestcontainersConfig;
 import vn.edu.bookstore.order.support.CatalogStub;
 
 @SpringBootTest (properties = {
