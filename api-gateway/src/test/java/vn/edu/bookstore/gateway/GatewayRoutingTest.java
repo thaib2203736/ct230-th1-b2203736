@@ -78,7 +78,11 @@ class GatewayRoutingTest {
         assertThat(r.headers().firstValue("X-Correlation-Id")).contains(LAST_CORRELATION.get());
     }
 
-    // TODO(TH3-1): thêm ca kiểm thử định tuyến /api/v1/orders/1001 sau khi khai báo tuyến orders
+    @Test
+    void dinhTuyenOrders() throws Exception {
+        assertThat(call("/api/v1/orders/1001", null).statusCode()).isEqualTo(200);
+        assertThat(LAST_PATH.get()).isEqualTo("/api/v1/orders/1001");
+    }
 
     @Test
     void duongDanKhongCoTuyenTraVe404() throws Exception {
