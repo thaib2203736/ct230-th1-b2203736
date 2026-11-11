@@ -21,6 +21,11 @@
     <module>legacy-bookcatalog-soap</module>
     <module>legacy-catalog-adapter</module>
     <module>catalog-service</module>
+    <module>discovery-server</module>
+    <module>config-server</module>
+    <module>inventory-service</module>
+    <module>order-service</module>
+    <module>api-gateway</module>
   </modules>
 
   <properties>
@@ -31,6 +36,7 @@
     <springdoc.version>3.2.0</springdoc.version>
     <openapi-generator.version>7.26.0</openapi-generator.version>
     <spring-cloud.version>2025.1.4</spring-cloud.version>
+    <spring-cloud-contract.version>5.0.3</spring-cloud-contract.version>
   </properties>
 
   <dependencyManagement>
@@ -58,6 +64,14 @@
         <groupId>org.springdoc</groupId>
         <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
         <version>${springdoc.version}</version>
+      </dependency>
+      <!-- Spring Cloud Contract không còn nằm trong release train 2025.1 → nhập BOM riêng -->
+      <dependency>
+        <groupId>org.springframework.cloud</groupId>
+        <artifactId>spring-cloud-contract-dependencies</artifactId>
+        <version>${spring-cloud-contract.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
       </dependency>
     </dependencies>
   </dependencyManagement>
