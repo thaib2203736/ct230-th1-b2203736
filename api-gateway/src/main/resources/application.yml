@@ -38,6 +38,8 @@ management:
       exposure:
         include: health,info,gateway,prometheus,metrics
   endpoint:
+    gateway:
+      enabled: true
     health:
       probes:
         enabled: true
